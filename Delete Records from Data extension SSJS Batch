@@ -1,0 +1,55 @@
+<script runat="server">
+Platform.Load("Core", "1.1.1");
+
+function retrieveDERows(deCustKey, reqID, filter) {
+ var cols = ["SubscriberKey"]; // Retrieving using Primary Key column.
+
+ if (reqID == null) {
+  return prox.retrieve("DataExtensionObject[" + deCustKey + "]", cols, filter);
+ } else {
+  return prox.getNextBatch("DataExtensionObject[" + deCustKey + "]", reqID);
+ }
+}
+
+try {
+ var prox = new Script.Util.WSProxy();
+ var deCustKey = '25015593-B3F2-41C4-9924-6C46D800C0C7'; // DE External Key
+ var moreData = true;
+ var reqID = null;
+
+ // Define the filter for EmailAddress LIKE '%demo.com%'
+ var filter = {
+  Property: "EmailAddress",
+  SimpleOperator: "LIKE",
+  Value: "%demo.com%"
+ };
+
+ while (moreData) {
+  var deReturn = retrieveDERows(deCustKey, reqID, filter);
+
+  if (deReturn && deReturn.Results && deReturn.Results.length > 0) {
+   var attributes = [];
+
+   for (var i = 0; i < deReturn.Results.length; i++) {
+    var subscriberKey = deReturn.Results[i].Properties[0].Value; // Assuming Properties[0] is SubscriberKey
+    attributes.push({
+     CustomerKey: deCustKey,
+     Keys: [{ Name: "SubscriberKey", Value: subscriberKey }]
+    });
+   }
+
+   // Deleting the retrieved batch of rows
+   var deleteResponse = prox.deleteBatch("DataExtensionObject", attributes);
+   // Write('\nDeleted Batch Response: ' + Stringify(deleteResponse));
+  }
+
+  // Update loop variables
+  moreData = deReturn.HasMoreRows || false;
+  reqID = deReturn.RequestID || null;
+ }
+
+ Write("\nAll records deleted successfully from DE: " + deCustKey + " with filter: EmailAddress LIKE '%demo.com%'");
+} catch (e) {
+ Write('\nException: ' + Stringify(e));
+}
+</script>

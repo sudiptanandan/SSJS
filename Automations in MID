@@ -1,0 +1,101 @@
+<html>
+<head>
+    <style>
+      body, a, input, td, th {font-family:sans-serif; font-size:12px;}
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      
+      td, th {
+        border: 1px solid #9f9c9c;
+        text-align: left;
+        padding: 8px;
+      }
+      
+      th {
+        background-color: #dddddd;
+      }
+      .divWrapper {
+        padding: 1px 20%;
+    }
+    </style>
+  </head>
+  <body style="font-family:sans-serif;">
+
+  <script runat="server">
+  
+    Platform.Load("core","1");  
+    var debug = false;
+    
+    try {
+  
+      var prox = new Script.Util.WSProxy();
+      var mids = [536001940];
+  
+      if (debug) {
+        Write("<br>mids: " + Stringify(mids));
+      }
+      
+      var textHTMLTableWrapper = "<div class='divWrapper'>";
+      for (i = 0; i < mids.length; i++) {
+       
+        var mid = mids[i];
+        prox.setClientId({"ID": mid});
+        var obj = "Automation";  
+        var cols = ["ProgramID","CustomerKey","Status","Name"];
+  
+        var filter = {
+            Property: "Status"
+            , SimpleOperator: "IN"
+            , Value: [-1,0,1,2,3,4,5,6,7,8]
+        };
+  
+        var opts = null;
+        var props = null;  
+        var moreObjs = true;
+        var reqID = null;
+        var textHTMLTable = "<h2>Automations in MID: "+mid+" </h2><table border='1'><tr><th style='width: 30px;'>#</th><th>Automation Name</th><th style='width: 60px;'>Status</th></tr>"
+        while (moreObjs) {
+            moreObjs = false;
+            var objs = reqID == null ? prox.retrieve(obj, cols, filter, opts, props) : prox.getNextBatch(obj, reqID);
+            
+            if (objs != null) {
+                moreObjs = objs.HasMoreRows;
+                reqID = objs.RequestID;
+                for (var j = 0; j < objs.Results.length; j++) {
+                  var automationObj = objs.Results[j];
+                  var statusDsc = "";
+                  switch (automationObj.Status) {
+                    case -1: statusDsc = "Error"; break;
+                    case  0: statusDsc = "Building Error"; break;
+                    case  1: statusDsc = "Building"; break;
+                    case  2: statusDsc = "Ready"; break;
+                    case  3: statusDsc = "Running"; break;
+                    case  4: statusDsc = "Paused"; break;
+                    case  5: statusDsc = "Stopped"; break;
+                    case  6: statusDsc = "Scheduled"; break;
+                    case  7: statusDsc = "Awaiting Trigger"; break;
+                    case  8: statusDsc = "Inactive Trigger"; break;
+                  }
+                  textHTMLTable += "<tr><td>" + (j+1) + "</td><td>" + automationObj.Name + "</td><td>" + statusDsc + "</td></tr>"
+                }  
+            }
+        }
+
+        prox.resetClientIds();
+        textHTMLTable += "</table><br><br><br>";
+        textHTMLTableWrapper += textHTMLTable;
+      }
+      textHTMLTableWrapper = textHTMLTableWrapper+ '</div>';
+      Write(textHTMLTableWrapper);
+    } catch (e) {
+  
+      if (debug) {
+        Platform.Response.Write("<br><br>error: " + Stringify(e));
+      }
+    }
+  </script>
+  </body>
+  </html>
